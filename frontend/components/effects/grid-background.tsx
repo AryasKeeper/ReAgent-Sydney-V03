@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/components/utils/cn'
 
@@ -45,17 +45,44 @@ export const GridBackground = memo(function GridBackground(props: GridBackground
 
   const reduceMotion = useReducedMotion()
 
+  // Detect theme (html.dark toggled by ThemeToggle)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof document === 'undefined') return true
+    return document.documentElement.classList.contains('dark')
+  })
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const el = document.documentElement
+    const obs = new MutationObserver(() => {
+      setIsDark(el.classList.contains('dark'))
+    })
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] })
+    return () => obs.disconnect()
+  }, [])
+
   const backgroundStyle = useMemo(() => {
-    const gridColor = rgba(colors.grid ?? '#FFFFFF', gridOpacity)
+    const darkColors = {
+      background: colors.background ?? '#0B0C0E',
+      grid: colors.grid ?? '#FFFFFF',
+    }
+    const lightColors = {
+      background: '#FFFFFF',
+      grid: '#0B0C0E',
+    }
+
+    const palette = isDark ? darkColors : lightColors
+    const gridColor = rgba(palette.grid, gridOpacity)
     return {
-      backgroundColor: colors.background ?? '#0B0C0E',
+      backgroundColor: palette.background,
       backgroundImage: `
         linear-gradient(to right, ${gridColor} 1px, transparent 1px),
         linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
       `,
       backgroundSize: `${gridSize}px ${gridSize}px`,
+      transition: 'background-color 200ms ease',
     } as React.CSSProperties
-  }, [colors.background, colors.grid, gridOpacity, gridSize])
+  }, [isDark, colors.background, colors.grid, gridOpacity, gridSize])
 
   const beams = useMemo(() => {
     const count = Math.max(0, beamsCount)
@@ -66,6 +93,8 @@ export const GridBackground = memo(function GridBackground(props: GridBackground
       return { color, delay, translate }
     })
   }, [beamsCount, beamsSpeed, colors.beams])
+
+  const beamsOpacityUsed = isDark ? beamsOpacity : Math.min(beamsOpacity, 0.04)
 
   return (
     <div
@@ -81,7 +110,7 @@ export const GridBackground = memo(function GridBackground(props: GridBackground
             <motion.div
               key={idx}
               className="absolute h-[220%] w-32 -left-16 top-[-60%] rotate-45 blur-2xl"
-              style={{ backgroundColor: rgba(b.color, beamsOpacity) }}
+              style={{ backgroundColor: rgba(b.color, beamsOpacityUsed) }}
               initial={{ x: '-20%' }}
               animate={{ x: `${b.translate}%` }}
               transition={{ duration: beamsSpeed, delay: b.delay, repeat: Infinity, ease: 'linear' }}
