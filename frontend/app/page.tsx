@@ -66,12 +66,12 @@ export default function HomePage() {
           </div>
           
           {/* Agent Status Bar - Minimal */}
-          <AgentStatusBar />
+          <AgentStatusBar position="bottom" />
         </div>
       ) : (
         // Chat Interface
         <div className="h-screen flex flex-col">
-          <AgentStatusBar />
+          <AgentStatusBar position="top" />
           <ChatInterface onBack={() => setShowChat(false)} />
         </div>
       )}

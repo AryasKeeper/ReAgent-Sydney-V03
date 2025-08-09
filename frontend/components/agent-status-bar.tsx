@@ -56,7 +56,11 @@ const agents: Agent[] = [
   }
 ]
 
-export default function AgentStatusBar() {
+interface AgentStatusBarProps {
+  position?: 'top' | 'bottom'
+}
+
+export default function AgentStatusBar({ position = 'bottom' }: AgentStatusBarProps) {
   const [agentStates, setAgentStates] = useState(agents)
 
   // Simulate agent activity
@@ -81,9 +85,10 @@ export default function AgentStatusBar() {
     }
   }
 
+  const borderClass = position === 'top' ? 'border-b' : 'border-t'
   return (
-    <div className="border-t bg-surface/50 backdrop-blur-sm dark:bg-white/5 overflow-visible">
-      <div className="px-6 py-3.5">
+    <div className={`${borderClass} bg-surface/50 backdrop-blur-sm dark:bg-white/5 overflow-visible`}>
+      <div className="px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-6 overflow-x-auto overflow-visible">
             {agentStates.map((agent) => {
