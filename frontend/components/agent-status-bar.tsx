@@ -87,10 +87,11 @@ export default function AgentStatusBar({ position = 'bottom' }: AgentStatusBarPr
 
   const borderClass = position === 'top' ? 'border-b' : 'border-t'
   return (
-    <div className={`${borderClass} bg-surface/50 backdrop-blur-sm dark:bg-white/5 overflow-visible`}>
-      <div className="px-6 py-4">
+    <div className={`${borderClass} bg-surface/50 backdrop-blur-sm dark:bg-white/5 overflow-visible`}
+         style={{ paddingTop: position === 'top' ? 6 : undefined, paddingBottom: position === 'bottom' ? 6 : undefined }}>
+      <div className="px-6 py-4" style={{ overflow: 'visible' }}>
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-6 overflow-x-auto overflow-visible">
+          <div className="flex items-center gap-6 overflow-x-auto" style={{ overflow: 'visible' }}>
             {agentStates.map((agent) => {
               const Icon = agent.icon
               return (
@@ -102,7 +103,7 @@ export default function AgentStatusBar({ position = 'bottom' }: AgentStatusBarPr
                   <div className="relative">
                     <Icon className="w-4 h-4 text-text-secondary dark:text-white/70" />
                     <div
-                      className={`absolute -top-0.5 -right-1 w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}
+                      className={`absolute top-0 right-0 w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}
                     />
                   </div>
                   <span className="text-xs font-medium text-text-secondary dark:text-white/70 group-hover:text-text-primary dark:group-hover:text-white transition-colors">

@@ -13,6 +13,9 @@
   html.dark {
     color-scheme: dark;
   }
+  header, footer, .fixed, .sticky {
+    overflow: visible;
+  }
   
   /* Minimal scrollbar styling */
   ::-webkit-scrollbar {
