@@ -82,10 +82,10 @@ export default function AgentStatusBar() {
   }
 
   return (
-    <div className="border-t bg-surface/50 backdrop-blur-sm dark:bg-white/5">
-      <div className="px-6 py-3">
+    <div className="border-t bg-surface/50 backdrop-blur-sm dark:bg-white/5 overflow-visible">
+      <div className="px-6 py-3.5">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-6 overflow-x-auto">
+          <div className="flex items-center gap-6 overflow-x-auto overflow-visible">
             {agentStates.map((agent) => {
               const Icon = agent.icon
               return (
@@ -96,8 +96,8 @@ export default function AgentStatusBar() {
                 >
                   <div className="relative">
                     <Icon className="w-4 h-4 text-text-secondary dark:text-white/70" />
-                    <div 
-                      className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}
+                    <div
+                      className={`absolute -top-0.5 -right-1 w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}
                     />
                   </div>
                   <span className="text-xs font-medium text-text-secondary dark:text-white/70 group-hover:text-text-primary dark:group-hover:text-white transition-colors">
