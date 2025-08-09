@@ -4,6 +4,11 @@ import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import AgentStatusBar from '@/components/agent-status-bar'
 import ChatInterface from '@/components/chat-interface'
+import dynamic from 'next/dynamic'
+
+const GridBackground = dynamic(() => import('@/components/effects/grid-background'), {
+  ssr: false,
+})
 
 export default function HomePage() {
   const [showChat, setShowChat] = useState(false)
@@ -12,7 +17,9 @@ export default function HomePage() {
     <div className="min-h-screen">
       {!showChat ? (
         // Hero Section - Apple-inspired minimalism
-        <div className="flex flex-col min-h-screen">
+        <div className="relative flex flex-col min-h-screen">
+          {/* Decorative background */}
+          <GridBackground />
           <div className="flex-1 flex items-center justify-center px-6">
             <div className="max-w-4xl mx-auto text-center space-y-8">
               {/* Subtle badge */}
