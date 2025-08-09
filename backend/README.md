@@ -27,7 +27,7 @@ Copy the `.env` file from V2 (it has all the API keys):
 cp ../reagent-sydney-v0.2/backend/.env .env
 ```
 
-Or create a new `.env` file:
+Or create a new `.env` file (see also `env.example`):
 ```env
 DEBUG=true
 USE_MOCK=false
@@ -41,6 +41,19 @@ TAVILY_API_KEY=your_tavily_key
 
 # Property Search
 FIRECRAWL_API_KEY=your_firecrawl_key
+
+# Redis (recommended)
+REDIS_URL=rediss://default:password@host:port/0
+USE_REDIS_SESSIONS=true
+
+# GPT-5 Responses API controls
+OPENAI_USE_RESPONSES=true
+OPENAI_REASONING_EFFORT=minimal   # minimal|low|medium|high
+OPENAI_VERBOSITY=low              # low|medium|high
+
+# Optional API key protection
+REQUIRE_API_KEY=false
+API_KEY=change_me
 ```
 
 ### 3. Run the Server
@@ -53,6 +66,12 @@ Or directly with Python:
 ```bash
 python app.py
 ```
+
+### 4. Verify
+
+- Health: `GET http://127.0.0.1:8000/health` (includes `redis` flag)
+- Metrics (DEBUG only): `GET http://127.0.0.1:8000/api/metrics`
+- SSE: POST to `/api/v1/agent-whisperer/chat/stream`
 
 ## API Endpoints
 
@@ -109,6 +128,13 @@ This backend uses the exact format required by Vercel AI SDK:
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key | Yes* | None |
 | `TAVILY_API_KEY` | Tavily search API key | Yes* | None |
 | `FIRECRAWL_API_KEY` | Firecrawl scraping API key | No | None |
+| `REDIS_URL` | Redis connection URL (use rediss:// for TLS) | No | None |
+| `USE_REDIS_SESSIONS` | Persist sessions in Redis | No | `false` |
+| `OPENAI_USE_RESPONSES` | Use GPT-5 Responses API | No | `false` |
+| `OPENAI_REASONING_EFFORT` | GPT‑5 reasoning effort | No | `medium` |
+| `OPENAI_VERBOSITY` | GPT‑5 verbosity | No | `medium` |
+| `REQUIRE_API_KEY` | Enforce API key header | No | `false` |
+| `API_KEY` | Value for `x-api-key` header | No | None |
 
 *At least one AI key (OpenAI or Anthropic) is required
 
@@ -137,6 +163,10 @@ services/
   web_search.py     # Tavily integration for weather/time
   property_search.py # Triple fallback property search
   session_manager.py # Session tracking (no repetitive greetings)
+  redis_store.py    # Redis connection + helpers (sessions/cache/limits)
+  rate_limit.py     # Redis-backed rate limiting
+  http_utils.py     # Retries/backoff + circuit breaker
+  metrics.py        # Counters/latency recording
   response_variety.py # Response templates for variety
 utils/
   streaming.py      # SSE formatting (Vercel AI SDK compatible)

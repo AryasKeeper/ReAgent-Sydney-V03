@@ -4,6 +4,7 @@ import logging
 from typing import Optional, Dict
 from datetime import datetime
 from config import settings
+from services.redis_store import redis_store
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,20 @@ class WebSearchService:
             return self._get_mock_weather_time(query)
         
         try:
+            # Cache by normalized query
+            cache_key = f"ws:{query.lower()}"
+            cached = await redis_store.get_json(cache_key)
+            if cached:
+                return cached
+
             result = await self._tavily_search(query)
             if result and result.get("answer"):
-                return result["answer"]
+                answer = result["answer"]
+                try:
+                    await redis_store.set_json(cache_key, answer, ttl_seconds=900)
+                except Exception:
+                    pass
+                return answer
             else:
                 return self._get_fallback_response(query)
                 
@@ -45,16 +57,23 @@ class WebSearchService:
             return None
         
         try:
+            from services.http_utils import fetch_with_retries, CircuitBreaker
+            breaker = CircuitBreaker()
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(
-                    f"{self.base_url}/search",
-                    json={
-                        "api_key": self.tavily_api_key,
-                        "query": query,
-                        "search_depth": "basic",
-                        "include_answer": True,
-                        "max_results": 3
-                    }
+                response = await fetch_with_retries(
+                    lambda: client.post(
+                        f"{self.base_url}/search",
+                        json={
+                            "api_key": self.tavily_api_key,
+                            "query": query,
+                            "search_depth": "basic",
+                            "include_answer": True,
+                            "max_results": 3
+                        }
+                    ),
+                    retries=2,
+                    base_delay=0.5,
+                    breaker=breaker,
                 )
                 
                 if response.status_code == 200:

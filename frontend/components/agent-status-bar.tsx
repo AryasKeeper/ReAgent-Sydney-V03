@@ -82,7 +82,7 @@ export default function AgentStatusBar() {
   }
 
   return (
-    <div className="border-t bg-surface/50 backdrop-blur-sm">
+    <div className="border-t bg-surface/50 backdrop-blur-sm dark:bg-white/5">
       <div className="px-6 py-3">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-6 overflow-x-auto">
@@ -95,12 +95,12 @@ export default function AgentStatusBar() {
                   title={agent.description}
                 >
                   <div className="relative">
-                    <Icon className="w-4 h-4 text-text-secondary" />
+                    <Icon className="w-4 h-4 text-text-secondary dark:text-white/70" />
                     <div 
                       className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}
                     />
                   </div>
-                  <span className="text-xs font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                  <span className="text-xs font-medium text-text-secondary dark:text-white/70 group-hover:text-text-primary dark:group-hover:text-white transition-colors">
                     {agent.name}
                   </span>
                 </div>
@@ -108,7 +108,7 @@ export default function AgentStatusBar() {
             })}
           </div>
           
-          <div className="flex items-center gap-2 text-xs text-text-muted">
+          <div className="flex items-center gap-2 text-xs text-text-muted dark:text-white/60">
             <div className="w-2 h-2 bg-green-500 rounded-full" />
             <span>All Systems Operational</span>
           </div>

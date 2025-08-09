@@ -1,6 +1,12 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
+import { Message, MessageContent } from '@/components/ai-elements/message'
+import { Response } from '@/components/ai-elements/response'
+import { ChatInput } from '@/components/ai-elements/input'
+import { ReasoningPanel } from '@/components/ai-elements/reasoning'
+import { MessageActions } from '@/components/ai-elements/actions'
+import { PropertyCardsFromText } from '@/components/property/property-cards'
 import { useState, useRef, useEffect } from 'react'
 import { Send, ArrowLeft, Loader2 } from 'lucide-react'
 
@@ -50,7 +56,10 @@ What aspect of Sydney real estate would you like to explore?`
     handleSubmit,
     isLoading = false,
     error,
-    setInput
+    setInput,
+    stop,
+    reload,
+    setMessages
   } = chatProps
 
   // Debug logging
@@ -97,9 +106,9 @@ What aspect of Sydney real estate would you like to explore?`
   }, [input])
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col bg-white dark:bg-[#0B0C0E]">
       {/* Header */}
-      <div className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b bg-white/95 dark:bg-black/30 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-4 px-6 py-4">
           {onBack && (
             <button
@@ -112,7 +121,7 @@ What aspect of Sydney real estate would you like to explore?`
           )}
           <div className="flex-1">
             <h2 className="font-semibold">ReAgent Intelligence</h2>
-            <p className="text-xs text-text-muted">Sydney Real Estate Analysis</p>
+            <p className="text-xs text-text-muted dark:text-white/60">Sydney Real Estate Analysis</p>
           </div>
         </div>
       </div>
@@ -120,27 +129,33 @@ What aspect of Sydney real estate would you like to explore?`
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+          <ReasoningPanel isLoading={isLoading} />
           {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-accent text-white'
-                    : 'bg-surface text-text-primary'
-                }`}
-              >
-                <div className="prose prose-sm max-w-none">
-                  {message.content.split('\n').map((line, i) => (
-                    <p key={i} className="mb-2 last:mb-0">
-                      {line}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <Message from={message.role as 'user' | 'assistant'} key={message.id}>
+              <MessageContent>
+                {message.content.split('\n').map((text, i) => (
+                  <Response key={`${message.id}-${i}`}>{text}</Response>
+                ))}
+                <PropertyCardsFromText text={message.content} />
+              </MessageContent>
+              {message.role === 'assistant' && (
+                <MessageActions
+                  contentForCopy={message.content}
+                  isLoading={isLoading}
+                  onStop={() => stop?.()}
+                  onRegenerate={() => {
+                    // Remove last assistant message and reload
+                    const idx = messages.findIndex((m) => m.id === message.id)
+                    if (idx !== -1) {
+                      const next = [...messages]
+                      next.splice(idx, 1)
+                      setMessages?.(next)
+                    }
+                    reload?.()
+                  }}
+                />
+              )}
+            </Message>
           ))}
           
           {isLoading && (
@@ -167,33 +182,12 @@ What aspect of Sydney real estate would you like to explore?`
       </div>
 
       {/* Input */}
-      <div className="border-t bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <form onSubmit={handleFormSubmit} className="flex gap-3">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about Sydney properties, market trends, investment opportunities..."
-              className="flex-1 px-4 py-3 bg-surface rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all min-h-[52px] max-h-32"
-              rows={1}
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className="px-4 py-3 bg-accent text-white rounded-xl hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
+      <ChatInput
+        value={input}
+        onChange={(v) => setInput(v)}
+        onSubmit={() => handleSubmit(new Event('submit') as any)}
+        isLoading={isLoading}
+      />
     </div>
   )
 }

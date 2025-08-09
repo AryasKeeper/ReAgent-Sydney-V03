@@ -34,10 +34,15 @@ class AIRouter:
             logger.info("Anthropic client initialized")
     
     async def process_message(
-        self, 
-        message: str, 
+        self,
+        message: str,
         session_id: str,
-        history: List[Dict] = None
+        history: List[Dict] = None,
+        *,
+        reasoning_effort: Optional[str] = None,
+        verbosity: Optional[str] = None,
+        allowed_tools: Optional[List[Dict]] = None,
+        tool_choice: Optional[Dict] = None,
     ) -> AsyncGenerator[str, None]:
         """Process a message and stream the response"""
         
@@ -54,7 +59,17 @@ class AIRouter:
         use_claude = self._should_use_claude(message)
         
         try:
-            if use_claude and self.anthropic_client:
+            if settings.OPENAI_USE_RESPONSES and self.openai_client:
+                async for chunk in self._stream_openai_responses(
+                    message,
+                    history,
+                    reasoning_effort=reasoning_effort,
+                    verbosity=verbosity,
+                    allowed_tools=allowed_tools,
+                    tool_choice=tool_choice,
+                ):
+                    yield chunk
+            elif use_claude and self.anthropic_client:
                 async for chunk in self._stream_claude_response(message, history):
                     yield chunk
             elif self.openai_client:
@@ -117,6 +132,72 @@ class AIRouter:
             logger.error(f"Full traceback: {error_details}")
             print(f"DEBUG - OpenAI Error: {e}")
             yield f"I'm having trouble connecting to the AI service. Error: {str(e)[:100]}"
+
+    async def _stream_openai_responses(
+        self,
+        message: str,
+        history: List[Dict],
+        *,
+        reasoning_effort: Optional[str] = None,
+        verbosity: Optional[str] = None,
+        allowed_tools: Optional[List[Dict]] = None,
+        tool_choice: Optional[Dict] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream response using OpenAI Responses API (GPT-5)."""
+        try:
+            input_texts: List[str] = []
+            if history:
+                for msg in history[-5:]:
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+                    prefix = "User:" if role == "user" else ("Assistant:" if role == "assistant" else "System:")
+                    input_texts.append(f"{prefix} {content}")
+            input_texts.append(f"User: {message}")
+
+            reasoning = {"effort": (reasoning_effort or settings.OPENAI_REASONING_EFFORT)}
+            text_opts = {"verbosity": (verbosity or settings.OPENAI_VERBOSITY)}
+
+            # Allowed tools example: restrict to discovery during general web search
+            tools: Optional[List[Dict]] = allowed_tools if allowed_tools else None
+            tool_choice_payload: Optional[Dict] = tool_choice if tool_choice else None
+            # We can toggle per intent outside; keep empty defaults for now
+
+            resp_stream = await self.openai_client.responses.create(
+                model=settings.OPENAI_MODEL,
+                input="\n".join(input_texts),
+                reasoning=reasoning,
+                text=text_opts,
+                tools=tools,
+                tool_choice=tool_choice_payload,
+                stream=True,
+            )
+
+            async for event in resp_stream:
+                # Expect text deltas
+                try:
+                    delta = getattr(event, "delta", None) or getattr(event, "data", None)
+                    if not delta:
+                        continue
+                    # openai-python v1.58 returns structured events; handle common cases
+                    chunk = None
+                    if isinstance(delta, dict):
+                        chunk = delta.get("output_text") or delta.get("text")
+                    else:
+                        # Fallback to string
+                        chunk = str(delta)
+                    if chunk:
+                        yield chunk
+                except Exception:
+                    continue
+
+            # Ensure we end cleanly even if stream had no deltas
+            return
+
+        except Exception as e:
+            logger.error(f"Responses API error: {e}")
+            # Fallback to chat completions
+            async for chunk in self._stream_openai_response(message, history):
+                yield chunk
     
     async def _stream_claude_response(self, message: str, history: List[Dict]) -> AsyncGenerator[str, None]:
         """Stream response from Claude"""

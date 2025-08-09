@@ -2,6 +2,18 @@
 from fastapi import APIRouter
 from datetime import datetime
 from config import settings
+from typing import Optional
+
+async def _redis_ok() -> Optional[bool]:
+    try:
+        if not getattr(settings, 'REDIS_URL', None):
+            return False
+        from services.redis_store import redis_store
+        r = await redis_store.connect()
+        pong = await r.ping()
+        return bool(pong)
+    except Exception:
+        return False
 
 router = APIRouter()
 
@@ -18,5 +30,6 @@ async def health_check():
             "anthropic": bool(settings.ANTHROPIC_API_KEY),
             "tavily": bool(settings.TAVILY_API_KEY),
             "firecrawl": bool(settings.FIRECRAWL_API_KEY),
-        }
+        },
+        "redis": await _redis_ok(),
     }

@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import logging
 
 from api import health, agent_whisperer
+from api import metrics as metrics_api
 from config import settings
 
 # Configure logging
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
         prefix="/api/v1/agent-whisperer",
         tags=["chat"]
     )
+    app.include_router(metrics_api.router, prefix="/api", tags=["metrics"])
     
     @app.on_event("startup")
     async def startup_event():

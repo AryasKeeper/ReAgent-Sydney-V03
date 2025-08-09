@@ -83,8 +83,11 @@ class PropertySearchService:
             urls = self._build_search_urls(params)
             
             for url in urls[:1]:  # Try first URL
+                from services.http_utils import fetch_with_retries, CircuitBreaker
+                breaker = CircuitBreaker()
                 async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(
+                    response = await fetch_with_retries(
+                        lambda: client.post(
                         "https://api.firecrawl.dev/v1/scrape",
                         headers={
                             "Authorization": f"Bearer {self.firecrawl_api_key}",
@@ -95,6 +98,10 @@ class PropertySearchService:
                             "formats": ["markdown"],
                             "onlyMainContent": True
                         }
+                    ),
+                    retries=2,
+                    base_delay=0.5,
+                    breaker=breaker,
                     )
                     
                     if response.status_code == 200:
@@ -114,8 +121,11 @@ class PropertySearchService:
         try:
             query = f"Sydney real estate {params.get('suburb', '')} {params.get('bedrooms', '')} bedroom houses under ${params.get('max_price', 2500000)}"
             
+            from services.http_utils import fetch_with_retries, CircuitBreaker
+            breaker = CircuitBreaker()
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(
+                response = await fetch_with_retries(
+                    lambda: client.post(
                     "https://api.tavily.com/search",
                     json={
                         "api_key": self.tavily_api_key,
@@ -123,12 +133,23 @@ class PropertySearchService:
                         "search_depth": "basic",
                         "include_answer": True
                     }
+                    ),
+                    retries=2,
+                    base_delay=0.5,
+                    breaker=breaker,
                 )
                 
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("answer"):
-                        return f"Based on current market data:\n\n{data['answer']}\n\nFor specific listings, check Domain.com.au or RealEstate.com.au"
+                        answer = data["answer"]
+                        try:
+                            # Cache summary by query
+                            from services.redis_store import redis_store
+                            await redis_store.set_json(f"ps:tav:{query}", answer, ttl_seconds=1800)
+                        except Exception:
+                            pass
+                        return f"Based on current market data:\n\n{answer}\n\nFor specific listings, check Domain.com.au or RealEstate.com.au"
                         
         except Exception as e:
             logger.error(f"Tavily property search error: {e}")

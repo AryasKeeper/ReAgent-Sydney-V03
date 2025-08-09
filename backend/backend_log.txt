@@ -1,0 +1,54 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\jonah\\Desktop\\ReAgent\\reagent-backend-v3']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [57884] using WatchFiles
+INFO:     Started server process [23420]
+INFO:     Waiting for application startup.
+2025-08-08 14:51:41,094 - app - INFO - ============================================================
+2025-08-08 14:51:41,095 - app - INFO - ReAgent Backend V3 - Starting
+2025-08-08 14:51:41,095 - app - INFO - Mock Mode: True
+2025-08-08 14:51:41,095 - app - INFO - Debug Mode: True
+2025-08-08 14:51:41,095 - app - INFO - ============================================================
+INFO:     Application startup complete.
+INFO:     127.0.0.1:1630 - "GET /health HTTP/1.1" 200 OK
+2025-08-08 14:53:49,215 - api.agent_whisperer - INFO - Chat request - Session: test, Message: Hello, test message...
+INFO:     127.0.0.1:4368 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 14:53:49,222 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 14:53:49,222 - services.session_manager - INFO - Marked session test as introduced
+2025-08-08 14:53:54,618 - api.agent_whisperer - INFO - Chat request - Session: test-property, Message: What can you tell me about property prices in Bond...
+INFO:     127.0.0.1:2680 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 14:53:54,619 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 14:53:54,619 - services.session_manager - INFO - Marked session test-property as introduced
+2025-08-08 14:53:54,619 - services.property_search - INFO - Property search initiated: What can you tell me about property prices in Bondi?
+2025-08-08 14:53:54,620 - services.property_search - INFO - Extracted params: {}
+2025-08-08 14:53:54,620 - services.property_search - INFO - Using mock property data
+INFO:     127.0.0.1:19273 - "GET /health HTTP/1.1" 200 OK
+2025-08-08 16:33:27,282 - api.agent_whisperer - INFO - Chat request - Session: default, Message: Hey...
+INFO:     127.0.0.1:35517 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:33:27,287 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:33:27,288 - services.session_manager - INFO - Marked session default as introduced
+2025-08-08 16:33:37,707 - api.agent_whisperer - INFO - Chat request - Session: default, Message: How are you?...
+INFO:     127.0.0.1:61990 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:33:37,709 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:33:45,716 - api.agent_whisperer - INFO - Chat request - Session: default, Message: First tell me how you are today...
+INFO:     127.0.0.1:55139 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:33:45,717 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:33:50,653 - api.agent_whisperer - INFO - Chat request - Session: default, Message: What can you help me with?...
+INFO:     127.0.0.1:38388 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:33:50,654 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:33:58,083 - api.agent_whisperer - INFO - Chat request - Session: default, Message: What time is it in Sydney?/...
+INFO:     127.0.0.1:28366 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:33:58,084 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:34:09,116 - api.agent_whisperer - INFO - Chat request - Session: default, Message: What about the weather there?...
+INFO:     127.0.0.1:9285 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:34:09,117 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:34:30,077 - api.agent_whisperer - INFO - Chat request - Session: default, Message: Now help me find 3-bedroom houses in Marrickville ...
+INFO:     127.0.0.1:7822 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:34:30,078 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:34:30,078 - services.property_search - INFO - Property search initiated: Now help me find 3-bedroom houses in Marrickville under $2.43M
+2025-08-08 16:34:30,079 - services.property_search - INFO - Extracted params: {'suburb': 'Marrickville', 'max_price': 2430000}
+2025-08-08 16:34:30,079 - services.property_search - INFO - Using mock property data
+WARNING:  WatchFiles detected changes in 'config.py'. Reloading...
+ 2025-08-08 16:41:51,038 - api.agent_whisperer - INFO - Chat request - Session: test-enhanced, Message: Hello...
+INFO:     127.0.0.1:22673 - "POST /api/v1/agent-whisperer/chat/stream HTTP/1.1" 200 OK
+2025-08-08 16:41:51,039 - api.agent_whisperer - INFO - Generator start - USE_MOCK=True
+2025-08-08 16:41:51,040 - services.session_manager - INFO - Marked session test-enhanced as introduced

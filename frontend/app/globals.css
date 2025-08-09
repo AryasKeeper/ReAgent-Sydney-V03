@@ -10,6 +10,9 @@
   body {
     @apply bg-background text-text-primary;
   }
+  html.dark {
+    color-scheme: dark;
+  }
   
   /* Minimal scrollbar styling */
   ::-webkit-scrollbar {

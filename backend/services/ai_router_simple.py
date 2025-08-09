@@ -1,4 +1,4 @@
-"""Simplified AI router using only GPT-5"""
+"""Simplified AI router using env-configured OpenAI model(s)"""
 import logging
 from typing import AsyncGenerator, List, Dict, Optional
 from openai import AsyncOpenAI
@@ -30,8 +30,21 @@ class SimpleAIRouter:
             return
         
         try:
+            model_primary = settings.OPENAI_MODEL if hasattr(settings, "OPENAI_MODEL") else "gpt-4o-mini"
+            model_fallback = (
+                settings.OPENAI_MODEL_FALLBACK if hasattr(settings, "OPENAI_MODEL_FALLBACK") and settings.OPENAI_MODEL_FALLBACK else model_primary
+            )
+
             messages = [
-                {"role": "system", "content": "You are Agent Whisperer, powered by GPT-5 - OpenAI's most advanced AI model. You specialize in Sydney real estate and can help with property searches, market analysis, investment strategies, and general questions. Be helpful, accurate, and conversational."}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Agent Whisperer, a Sydney real estate assistant. "
+                        "You have tools: Brave Search (discovery), Firecrawl (scrape), and optional JS rendering via Browserless. "
+                        "For live info: plan → search → open → extract → synthesize. "
+                        "Be concise, accurate, and cite sources when web info is used."
+                    ),
+                }
             ]
             
             if history:
@@ -40,9 +53,8 @@ class SimpleAIRouter:
             
             messages.append({"role": "user", "content": message})
             
-            # Use GPT-5
             stream = await self.client.chat.completions.create(
-                model="gpt-5",  # GPT-5 - announced August 7, 2025
+                model=model_primary,
                 messages=messages,
                 stream=True,
                 temperature=0.7,
@@ -54,11 +66,11 @@ class SimpleAIRouter:
                     yield chunk.choices[0].delta.content
                     
         except Exception as e:
-            logger.error(f"GPT-5 error: {e}")
-            # Try fallback to GPT-4 if GPT-5 fails
+            logger.error(f"Primary model error: {e}")
+            # Try fallback model
             try:
                 stream = await self.client.chat.completions.create(
-                    model="gpt-4-turbo-preview",
+                    model=model_fallback,
                     messages=messages,
                     stream=True,
                     temperature=0.7,
