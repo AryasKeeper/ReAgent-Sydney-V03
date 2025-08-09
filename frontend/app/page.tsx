@@ -9,7 +9,6 @@ import dynamic from 'next/dynamic'
 const GridBackground = dynamic(() => import('@/components/effects/grid-background'), {
   ssr: false,
 })
-const ShimmeringText = dynamic(() => import('@/components/effects/shimmering-text'), { ssr: false })
 
 export default function HomePage() {
   const [showChat, setShowChat] = useState(false)
@@ -31,17 +30,11 @@ export default function HomePage() {
               </div>
               
               {/* Strong headline */}
-              <h1 className="text-5xl md:text-7xl font-semibold tracking-tight">
-                <ShimmeringText
-                  text={<>
-                    Intelligence that sees
-                    <span className="block text-gray-400 dark:text-white/40">{" "}tomorrow's market today</span>
-                  </>}
-                  duration={3}
-                  repeatDelay={0.8}
-                  shimmerColor="rgba(99,102,241,0.35)" /* indigo-500 @ 35% */
-                  className="[text-wrap:balance]"
-                />
+              <h1 className="text-5xl md:text-7xl font-semibold tracking-tight [text-wrap:balance]">
+                Intelligence that sees
+                <span className="block text-gray-400 dark:text-white/40">
+                  tomorrow's market today
+                </span>
               </h1>
               
               {/* Clear value prop */}
