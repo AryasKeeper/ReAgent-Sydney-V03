@@ -1,0 +1,16 @@
+name: codeql
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '32 3 * * 2'
+
+jobs:
+  analyze:
+    uses: github/codeql-action/.github/workflows/codeql.yml@v3
+    with:
+      languages: 'javascript-typescript, python'
+      build-mode: 'autobuild'
