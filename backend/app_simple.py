@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 # Import routers
-from api import agent_whisperer, health
+from api import agent_whisperer, health, monitoring
 
 # Setup logging
 logging.basicConfig(
@@ -37,6 +37,11 @@ app.include_router(
     agent_whisperer.router, 
     prefix="/api/v1/agent-whisperer",
     tags=["chat"]
+)
+app.include_router(
+    monitoring.router,
+    prefix="/api/v1/monitoring",
+    tags=["monitoring"]
 )
 
 @app.on_event("startup")

@@ -34,7 +34,11 @@
       "Bash(npm:*)",
       "Bash(npx:*)",
       "Bash(git add:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(claude-flow --version)",
+      "Bash(claude-flow init:*)",
+      "Bash(claude-flow --help)",
+      "Bash(claude-flow hive-mind:*)"
     ],
     "deny": []
   }

@@ -18,6 +18,7 @@ from config import settings
 from services.agentic_browse import agentic_browse
 from services.rate_limit import check_rate_limit
 from services.metrics import Stopwatch, incr_counter
+from services.metrics_collector import metrics_collector
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -83,17 +84,33 @@ async def chat_stream(request: ChatRequest, req: Request):
         
         # Stream the response
         async def generate():
+            # Start metrics tracking
+            is_experiment = headers_dict.get('x-experiment-active', 'false') == 'true'
+            experiment_id = headers_dict.get('x-experiment-id')
+            metrics_collector.start_request(
+                req_id,
+                request.session_id,
+                'v5' if protocol_version == 'v5' else 'v3',
+                protocol_version,
+                is_experiment,
+                experiment_id
+            )
+            
             try:
                 logger.info(f"Generator start - Live Mode Active, Protocol: {protocol_version}")
                 
                 # Send message start for v5 protocol
                 if protocol_version == "v5":
                     yield format_sse_chunk("", "message_start", protocol_version)
+                    metrics_collector.record_first_byte(req_id)
                 
                 # Add greeting for new sessions
                 if session_manager.should_introduce(request.session_id):
                     greeting = get_greeting()
-                    yield format_sse_chunk(greeting, "text", protocol_version)
+                    chunk = format_sse_chunk(greeting, "text", protocol_version)
+                    yield chunk
+                    metrics_collector.record_chunk(req_id, len(chunk))
+                    metrics_collector.record_first_message(req_id)
                     session_manager.mark_introduced(request.session_id)
                 
                 # Analyze query to determine type and parameters
@@ -111,7 +128,9 @@ async def chat_stream(request: ChatRequest, req: Request):
                 
                 # Show fallback notice if applicable
                 if fallback_notice and settings.BROWSE_FALLBACK_NOTICE:
-                    yield format_sse_chunk(f"{fallback_notice}\n\n", "text", protocol_version)
+                    chunk = format_sse_chunk(f"{fallback_notice}\n\n", "text", protocol_version)
+                    yield chunk
+                    metrics_collector.record_chunk(req_id, len(chunk))
                 
                 # Route based on query type
                 if query_type == QueryType.GREETING:
@@ -244,12 +263,17 @@ async def chat_stream(request: ChatRequest, req: Request):
                 # Send finish signal
                 yield format_sse_chunk("", "finish", protocol_version)
                 
+                # Complete metrics tracking
+                metrics_collector.complete_request(req_id)
+                
             except Exception as e:
                 import traceback
                 error_detail = traceback.format_exc()
                 logger.error(f"Stream generation error: {e}\nTraceback:\n{error_detail}")
+                metrics_collector.record_error(req_id, str(e))
                 yield format_sse_chunk("I encountered an error. Please try again.", "text", protocol_version)
                 yield format_sse_chunk("", "finish", protocol_version)
+                metrics_collector.complete_request(req_id)
         
         # Set appropriate headers based on protocol version
         response_headers = {

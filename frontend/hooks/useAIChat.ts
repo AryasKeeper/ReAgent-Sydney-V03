@@ -3,11 +3,23 @@
 import { useChat as useAIChatV3 } from '@ai-sdk/react'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Message } from 'ai'
+import { determineSDKVersion, getABTestHeaders, logABTestAssignment } from '@/lib/ab-testing'
+import { performanceCollector } from '@/lib/performance-metrics'
 
 // Feature flag for AI SDK v5
 const isV5Enabled = () => {
   if (typeof window === 'undefined') return false
-  return process.env.NEXT_PUBLIC_AI_SDK_V5_ENABLED === 'true'
+  
+  // Use A/B testing framework to determine version
+  const sessionId = typeof window !== 'undefined' ? 
+    (sessionStorage.getItem('session_id') || 'default') : 'default'
+  
+  const result = determineSDKVersion(sessionId)
+  
+  // Log assignment for monitoring
+  logABTestAssignment(sessionId, result)
+  
+  return result.version === 'v5'
 }
 
 // V5 Transport-based implementation with UI Message Stream protocol
@@ -43,21 +55,28 @@ function useAIChatV5(options: any) {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     
+    // Start performance tracking
+    const requestId = `req_${Date.now()}`
+    const sessionId = sessionStorage.getItem('session_id') || 'default'
+    performanceCollector.startRequest(requestId, sessionId, 'v5')
+    
     try {
       // V5 Transport implementation with UI Message Stream protocol
       transportRef.current = new AbortController()
+      
+      // Get A/B test headers
+      const abTestResult = determineSDKVersion(sessionId)
+      const abHeaders = getABTestHeaders(abTestResult)
       
       const response = await fetch(options.api || '/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Signal v5 UI Message Stream protocol to backend
-          'x-vercel-ai-ui-message-stream': 'v1',
-          'x-ai-sdk-version': '5'
+          ...abHeaders
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
-          sessionId: options.sessionId
+          sessionId: options.sessionId || sessionId
         }),
         signal: transportRef.current.signal
       })
@@ -66,12 +85,16 @@ function useAIChatV5(options: any) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
+      // Record first byte
+      performanceCollector.recordFirstByte(requestId)
+      
       // Handle v5 UI Message Stream format
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       
       let assistantMessage: Message | null = null
       let currentMessageId: string | null = null
+      let firstMessageRecorded = false
       
       if (reader) {
         let buffer = ''
@@ -80,7 +103,9 @@ function useAIChatV5(options: any) {
           const { done, value } = await reader.read()
           if (done) break
           
-          buffer += decoder.decode(value, { stream: true })
+          const chunk = decoder.decode(value, { stream: true })
+          performanceCollector.recordChunk(requestId, chunk.length)
+          buffer += chunk
           const lines = buffer.split('\n')
           
           // Keep the last incomplete line in buffer
@@ -109,6 +134,10 @@ function useAIChatV5(options: any) {
                   case 'text-delta':
                     // Incremental text content
                     if (assistantMessage) {
+                      if (!firstMessageRecorded) {
+                        performanceCollector.recordFirstMessage(requestId)
+                        firstMessageRecorded = true
+                      }
                       assistantMessage.content += message.textDelta || ''
                       setMessages(prev => {
                         const newMessages = [...prev]
@@ -135,6 +164,7 @@ function useAIChatV5(options: any) {
                     
                   case 'error':
                     // Error in stream
+                    performanceCollector.recordError(requestId)
                     const streamError = new Error(message.error?.message || 'Stream error')
                     setError(streamError)
                     options.onError?.(streamError)
@@ -177,7 +207,16 @@ function useAIChatV5(options: any) {
       if (assistantMessage) {
         options.onFinish?.(assistantMessage)
       }
+      
+      // Complete performance tracking
+      const metrics = performanceCollector.completeRequest(requestId)
+      if (metrics && process.env.NODE_ENV === 'development') {
+        console.log('[V5 Performance]', metrics)
+      }
     } catch (err: any) {
+      performanceCollector.recordError(requestId)
+      performanceCollector.completeRequest(requestId)
+      
       if (err.name !== 'AbortError') {
         setError(err)
         options.onError?.(err)
