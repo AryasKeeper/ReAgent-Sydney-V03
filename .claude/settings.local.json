@@ -38,7 +38,11 @@
       "Bash(claude-flow --version)",
       "Bash(claude-flow init:*)",
       "Bash(claude-flow --help)",
-      "Bash(claude-flow hive-mind:*)"
+      "Bash(claude-flow hive-mind:*)",
+      "Bash(claude-flow:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm install:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }

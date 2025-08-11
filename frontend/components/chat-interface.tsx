@@ -1,11 +1,14 @@
 'use client'
 
 import { useAIChat } from '@/hooks/useAIChat'
-import { Message, MessageContent } from '@/components/ai-elements/message'
-import { Response } from '@/components/ai-elements/response'
-import { ChatInput } from '@/components/ai-elements/input'
-import { ReasoningPanel } from '@/components/ai-elements/reasoning'
-import { MessageActions } from '@/components/ai-elements/actions'
+import { 
+  Message, 
+  MessageContent, 
+  Response, 
+  ChatInput, 
+  ReasoningPanel, 
+  MessageActions 
+} from '@/components/ai-elements'
 import { PropertyCardsFromText } from '@/components/property/property-cards'
 import { useState, useRef, useEffect } from 'react'
 import { Send, ArrowLeft, Loader2 } from 'lucide-react'

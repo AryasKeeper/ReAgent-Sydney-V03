@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { MigrationStatus } from '@/components/migration-status'
+import { PerformanceDashboard } from '@/components/performance-dashboard'
+import { AIElementsMigrationDashboard } from '@/components/ai-elements-migration-dashboard'
 
 export const metadata: Metadata = {
   title: 'ReAgent - Sydney Real Estate Intelligence',
@@ -22,6 +25,10 @@ export default function RootLayout({
           <ThemeToggle />
         </div>
         {children}
+        {/* Development dashboards */}
+        <MigrationStatus />
+        <PerformanceDashboard />
+        <AIElementsMigrationDashboard />
       </body>
     </html>
   )
