@@ -3,24 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3004",
-    "dev:turbo": "next dev --turbopack",
+    "Dev:turbo": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3004",
     "lint": "next lint"
   },
   "dependencies": {
-    "ai": "^3.4.33",
-    "@ai-sdk/react": "^0.0.70",
+    "ai": "^5.0.9",
+    "@ai-sdk/react": "^2.0.9",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
-    "framer-motion": "^11.15.0",
-    "lucide-react": "^0.468.0",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.539.0",
     "next": "15.4.6",
     "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "tailwind-merge": "^2.2.0"
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.19.9",
