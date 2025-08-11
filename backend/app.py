@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
             "http://localhost:3000",  # V3 frontend
             "http://localhost:3001",  # V3 frontend alt port
             "http://localhost:3002",  # Dev port
+            "http://localhost:3004",  # Fixed dev port
         ],
         allow_credentials=True,
         allow_methods=["*"],
