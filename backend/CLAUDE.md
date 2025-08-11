@@ -55,6 +55,14 @@ This is a FastAPI-based backend for the ReAgent real estate AI assistant. The sy
 - Classifies queries into types: GREETING, PROPERTY_SEARCH, PROPERTY_ANALYSIS, WEATHER, TIME, NEWS, WEB_SEARCH, GENERAL
 - Extracts parameters from natural language queries
 - Determines routing strategy for each query type
+- **Updated**: Enhanced web search detection with "live sources", "real-time", "browse" triggers
+
+**Agentic Browse (`services/agentic_browse.py`)**
+- **Complete Implementation**: Full browse pipeline with Search → Extract → Synthesize
+- Brave search for URL discovery
+- Firecrawl → Browserless fallback chain for content extraction
+- AI-powered content synthesis
+- Returns synthesized content with source attribution
 
 **Property Search (`services/property_search.py`)**
 - Triple fallback strategy: Firecrawl → Tavily → Mock data
@@ -71,14 +79,18 @@ This is a FastAPI-based backend for the ReAgent real estate AI assistant. The sy
 **CRITICAL**: The backend uses a specific SSE format for Vercel AI SDK compatibility:
 - Text chunks: `0:"content"\n`
 - Finish signal: `d:{"finishReason":"stop"}\n`
+- Sources metadata: `8:["url1", "url2"]\n` (for web browsing)
 - DO NOT use `data:` prefix or `\n\n` terminators
 
 Implementation in `utils/streaming.py`:
 ```python
 def format_sse_chunk(content: str, chunk_type: str = "text") -> str:
-    if chunk_type == "finish":
-        return 'data: {"finishReason":"stop"}\n\n'
-    return f'0:"{content}"\n'
+    if chunk_type == "text":
+        return f'0:{json.dumps(content)}\n'
+    elif chunk_type == "finish":
+        return 'd:{"finishReason":"stop"}\n'
+    elif chunk_type == "sources_meta":
+        return f'8:{json.dumps(content)}\n'
 ```
 
 ### API Endpoint Structure

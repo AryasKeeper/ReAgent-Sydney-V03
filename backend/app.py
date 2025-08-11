@@ -11,6 +11,16 @@ from api import health, agent_whisperer
 from api import metrics as metrics_api
 from config import settings
 
+# Import debug router only in debug mode
+try:
+    if settings.DEBUG:
+        from api import debug_browse
+        debug_router_available = True
+    else:
+        debug_router_available = False
+except ImportError:
+    debug_router_available = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -49,6 +59,15 @@ def create_app() -> FastAPI:
         tags=["chat"]
     )
     app.include_router(metrics_api.router, prefix="/api", tags=["metrics"])
+    
+    # Include debug router in debug mode
+    if debug_router_available:
+        app.include_router(
+            debug_browse.router,
+            prefix="/api/v1",
+            tags=["debug"]
+        )
+        logger.info("Debug endpoints enabled at /api/v1/debug/*")
     
     @app.on_event("startup")
     async def startup_event():

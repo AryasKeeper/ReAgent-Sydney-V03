@@ -11,3 +11,6 @@ frontend/.next/
 frontend/nul
 frontend/*.log
 \nbackend/.env
+# Add .env to .gitignore
+backend/.env
+backend/.env.browsing

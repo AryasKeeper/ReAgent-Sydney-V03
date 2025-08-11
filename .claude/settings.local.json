@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(true)",
+      "Bash(dir:*)",
+      "Bash(npm run build:*)",
+      "Bash(mkdir:*)",
+      "Bash(python tests/test_classification_priority.py:*)",
+      "Bash(pip install:*)",
+      "Bash(python test_web_browsing.py:*)",
+      "Bash(timeout:*)"
+    ],
+    "deny": []
+  }
+}

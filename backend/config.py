@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     # Response variety
     ENABLE_VARIETY: bool = True
     
+    # Web Browsing Feature Flags
+    BROWSE_FORCE_EXPLICIT: bool = True  # Enable explicit web search override
+    BROWSE_SESSION_MEMORY: bool = True  # Enable session preference memory
+    BROWSE_FALLBACK_NOTICE: bool = True  # Show fallback notices when APIs unavailable
+    
+    # Classification Logging Controls
+    CLASSIFICATION_LOG_RATE_LIMIT: int = 100  # Max classification logs per minute
+    CLASSIFICATION_LOG_MAX_LENGTH: int = 50  # Max query length in logs
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

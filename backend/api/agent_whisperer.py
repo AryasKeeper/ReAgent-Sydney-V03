@@ -87,8 +87,21 @@ async def chat_stream(request: ChatRequest, req: Request):
                     session_manager.mark_introduced(request.session_id)
                 
                 # Analyze query to determine type and parameters
-                query_type, params = query_analyzer.analyze_query(request.message)
-                logger.info(f"Query analyzed - Type: {query_type}, Params: {params}")
+                # Check if web APIs are available for fallback handling
+                has_web_apis = bool(settings.BRAVE_API_KEY and 
+                                   (settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY))
+                
+                # Use fallback-aware analysis
+                query_type, params, fallback_notice = query_analyzer.analyze_query_with_fallback(
+                    request.message, 
+                    request.session_id,
+                    has_web_apis
+                )
+                logger.info(f"Query analyzed - Type: {query_type}, Params: {params}, Fallback: {fallback_notice}")
+                
+                # Show fallback notice if applicable
+                if fallback_notice and settings.BROWSE_FALLBACK_NOTICE:
+                    yield format_sse_chunk(f"{fallback_notice}\n\n")
                 
                 # Route based on query type
                 if query_type == QueryType.GREETING:
@@ -162,9 +175,17 @@ async def chat_stream(request: ChatRequest, req: Request):
                             logger.warning(f"WEB_SEARCH LLM tools path failed: {e}; falling back to agentic browse")
                     if not tried_llm:
                         summary, sources = await agentic_browse(request.message)
-                        yield format_sse_chunk(summary)
+                        
+                        # Send sources metadata first (as SSE type 8)
                         if sources:
-                            yield format_sse_chunk("\nSources:\n" + "\n".join(f"- {s}" for s in sources))
+                            yield format_sse_chunk(sources, "sources_meta")
+                        
+                        # Then send the synthesized content
+                        yield format_sse_chunk(summary)
+                        
+                        # Optionally append sources in text format for backward compatibility
+                        if sources:
+                            yield format_sse_chunk("\n\n**Sources:**\n" + "\n".join(f"- [{s}]({s})" for s in sources))
                         
                 else:  # QueryType.GENERAL_CHAT
                     # General AI conversation
