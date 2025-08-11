@@ -201,7 +201,7 @@ class AIRouter:
     
     async def _stream_claude_response(self, message: str, history: List[Dict]) -> AsyncGenerator[str, None]:
         """Stream response from Claude"""
-        system = "You are Agent Whisperer, powered by Claude 4 Sonnet - an advanced AI with extended reasoning capabilities. You specialize in Sydney real estate with deep analytical abilities for market trends, investment strategies, and complex property analysis. Use your step-by-step thinking to provide thorough, insightful responses."
+        system = "You are Agent Whisperer, powered by Claude Opus 4.1 - an advanced AI with extended reasoning capabilities. You specialize in Sydney real estate with deep analytical abilities for market trends, investment strategies, and complex property analysis. Use your step-by-step thinking to provide thorough, insightful responses."
         
         messages = []
         if history:
@@ -212,7 +212,7 @@ class AIRouter:
         
         try:
             async with self.anthropic_client.messages.stream(
-                model="claude-3-5-sonnet-20241022",  # Claude 3.5 Sonnet - Anthropic's latest model
+                model="claude-opus-4-1-20250805",  # Claude Opus 4.1 - Latest model
                 max_tokens=1024,
                 system=system,
                 messages=messages,
