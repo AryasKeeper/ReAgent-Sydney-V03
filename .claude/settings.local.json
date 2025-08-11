@@ -42,7 +42,15 @@
       "Bash(claude-flow:*)",
       "Bash(grep:*)",
       "Bash(pnpm install:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(git rm:*)",
+      "WebFetch(domain:context7.com)",
+      "Bash(taskkill:*)",
+      "Bash(claude --version)",
+      "Bash(\"C:\\Users\\jonah\\AppData\\Roaming\\npm\\claude\" --version)",
+      "Bash(echo $PATH)",
+      "Bash(export PATH=\"$PATH:/c/Users/jonah/AppData/Roaming/npm\")"
     ],
     "deny": []
   }

@@ -3,23 +3,11 @@
 import { useChat as useAIChatV3 } from '@ai-sdk/react'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Message } from 'ai'
-import { determineSDKVersion, getABTestHeaders, logABTestAssignment } from '@/lib/ab-testing'
 import { performanceCollector } from '@/lib/performance-metrics'
 
-// Feature flag for AI SDK v5
+// Dev mode: Just use v5 directly (no A/B testing complexity)
 const isV5Enabled = () => {
-  if (typeof window === 'undefined') return false
-  
-  // Use A/B testing framework to determine version
-  const sessionId = typeof window !== 'undefined' ? 
-    (sessionStorage.getItem('session_id') || 'default') : 'default'
-  
-  const result = determineSDKVersion(sessionId)
-  
-  // Log assignment for monitoring
-  logABTestAssignment(sessionId, result)
-  
-  return result.version === 'v5'
+  return process.env.NEXT_PUBLIC_AI_SDK_V5_ENABLED === 'true'
 }
 
 // V5 Transport-based implementation with UI Message Stream protocol
@@ -64,15 +52,11 @@ function useAIChatV5(options: any) {
       // V5 Transport implementation with UI Message Stream protocol
       transportRef.current = new AbortController()
       
-      // Get A/B test headers
-      const abTestResult = determineSDKVersion(sessionId)
-      const abHeaders = getABTestHeaders(abTestResult)
-      
+      // Simple dev mode - no A/B testing
       const response = await fetch(options.api || '/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...abHeaders
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
