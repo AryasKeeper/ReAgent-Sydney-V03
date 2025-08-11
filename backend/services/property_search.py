@@ -52,7 +52,9 @@ class PropertySearchService:
         params = {}
         
         # Extract suburb
-        suburbs = ["marrickville", "newtown", "stanmore", "enmore", "dulwich hill", "petersham"]
+        suburbs = ["marrickville", "newtown", "stanmore", "enmore", "dulwich hill", "petersham",
+                   "bondi", "bondi beach", "bondi junction", "north bondi", "randwick", "coogee",
+                   "manly", "mosman", "paddington", "surry hills", "alexandria", "zetland"]
         query_lower = query.lower()
         for suburb in suburbs:
             if suburb in query_lower:
@@ -107,7 +109,7 @@ class PropertySearchService:
                     if response.status_code == 200:
                         # For now, return that we found listings
                         # In production, parse the markdown for actual properties
-                        return f"Found property listings in {params.get('suburb', 'Sydney')}. Check Domain.com.au for details: {url}"
+                        return f"Found property listings in {params.get('suburb', 'Sydney')}.\n\n- {url}"
                     else:
                         logger.warning(f"Firecrawl returned {response.status_code}")
                         

@@ -1,6 +1,6 @@
 'use client'
 
-import { useChat } from '@ai-sdk/react'
+import { useAIChat } from '@/hooks/useAIChat'
 import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Response } from '@/components/ai-elements/response'
 import { ChatInput } from '@/components/ai-elements/input'
@@ -19,7 +19,7 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [isInitialized, setIsInitialized] = useState(false)
 
-  const chatProps = useChat({
+  const chatProps = useAIChat({
     api: '/api/chat',
     initialMessages: [
       {

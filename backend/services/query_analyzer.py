@@ -81,6 +81,7 @@ class QueryAnalyzer:
             # Time-based triggers
             "real-time", "real time", "realtime", "up-to-date", "up to date",
             "latest information", "current information", "most recent",
+            "latest", "current", "newest", "recent",
             "today's", "todays", "right now", "this moment",
             
             # Additional aliases
