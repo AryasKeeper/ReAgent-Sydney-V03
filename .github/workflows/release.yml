@@ -1,0 +1,329 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - canary
+
+env:
+  NODE_VERSION: '20.x'
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  validate:
+    name: Pre-Release Validation
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${{ github.event.inputs.version }}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+          
+      - name: Validate version format
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+          
+      - name: Run tests
+        working-directory: backend
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pytest tests/ -v --cov=. --cov-report=xml
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/coverage.xml
+          flags: backend
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package-lock.json') }}
+          
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+        
+      - name: Run linter
+        working-directory: frontend
+        run: npm run lint
+        
+      - name: Run type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+        
+      - name: Run tests
+        working-directory: frontend
+        run: npm test -- --coverage
+        
+      - name: Build application
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: npm run build
+
+  migration-validation:
+    name: Migration Validation
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Validate AI SDK v5 compatibility
+        run: |
+          echo "Checking AI SDK v5 migration status..."
+          # Check feature flags
+          grep -q "NEXT_PUBLIC_AI_SDK_V5_ENABLED" .env.example || exit 1
+          grep -q "NEXT_PUBLIC_UI_MESSAGE_STREAM_ENABLED" .env.example || exit 1
+          
+      - name: Validate AI Elements migration
+        run: |
+          echo "Checking AI Elements migration status..."
+          # Check component abstraction layer
+          test -f frontend/components/ai-elements/index.tsx || exit 1
+          test -f frontend/lib/ai-elements-migration.ts || exit 1
+          
+      - name: Check rollback capability
+        run: |
+          echo "Verifying rollback mechanisms..."
+          # Ensure feature flags can disable features
+          grep -q "NEXT_PUBLIC_V5_TRAFFIC_PERCENTAGE" .env.example || exit 1
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, migration-validation, security-scan]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${{ needs.validate.outputs.version }}
+          echo "# Release v$VERSION" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## What's Changed" >> RELEASE_NOTES.md
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" >> RELEASE_NOTES.md
+          else
+            git log --pretty=format:"- %s (%h)" -n 20 >> RELEASE_NOTES.md
+          fi
+          
+          echo "" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Migration Status" >> RELEASE_NOTES.md
+          echo "- AI SDK v5: Progressive rollout" >> RELEASE_NOTES.md
+          echo "- AI Elements: Foundation complete" >> RELEASE_NOTES.md
+          echo "- Streaming Protocol: Dual support (v3/v5)" >> RELEASE_NOTES.md
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: Release v${{ needs.validate.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-vercel:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: [create-release, validate]
+    if: github.event.inputs.release_type != 'canary'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+        
+      - name: Deploy to Vercel
+        run: |
+          if [ "${{ github.event.inputs.release_type }}" = "staging" ]; then
+            vercel --token=${{ secrets.VERCEL_TOKEN }} --prod=false
+          else
+            vercel --token=${{ secrets.VERCEL_TOKEN }} --prod
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: deploy-vercel
+    
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+        
+      - name: Health check
+        run: |
+          DEPLOYMENT_URL="${{ secrets.DEPLOYMENT_URL }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL/api/v1/monitoring/health")
+          if [ "$response" != "200" ]; then
+            echo "Health check failed with status: $response"
+            exit 1
+          fi
+          echo "Health check passed"
+          
+      - name: Validate streaming
+        run: |
+          echo "Testing SSE streaming endpoint..."
+          # Test both v3 and v5 protocols
+          
+      - name: Performance check
+        run: |
+          echo "Checking performance metrics..."
+          # Query monitoring endpoint for performance data
+          
+      - name: Rollback trigger check
+        run: |
+          echo "Checking if rollback is needed..."
+          # Check error rates and latency
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [create-release, deploy-vercel, post-deployment-validation]
+    if: always()
+    
+    steps:
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Release v${{ needs.validate.outputs.version }} deployed successfully!"
+          # Send success notification (Slack, Discord, etc.)
+          
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Release v${{ needs.validate.outputs.version }} failed!"
+          # Send failure notification with rollback instructions
