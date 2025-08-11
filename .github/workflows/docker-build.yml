@@ -41,7 +41,7 @@ jobs:
           fi
 
       - name: Build and push (SHA)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build and push (latest)
         if: ${{ steps.meta.outputs.latest }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build and push (PR)
         if: ${{ steps.meta.outputs.pr }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
