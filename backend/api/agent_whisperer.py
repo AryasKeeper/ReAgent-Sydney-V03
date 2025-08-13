@@ -19,6 +19,8 @@ from services.agentic_browse import agentic_browse
 from services.rate_limit import check_rate_limit
 from services.metrics import Stopwatch, incr_counter
 from services.metrics_collector import metrics_collector
+from services.jwt_auth import jwt_auth
+from services.connection_manager import connection_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,11 +73,33 @@ async def chat_stream(request: ChatRequest, req: Request):
         protocol_version = detect_protocol_version(headers_dict)
         logger.info(f"[{req_id}] Using protocol version: {protocol_version}")
         
-        # Optional API key enforcement
-        if getattr(settings, 'REQUIRE_API_KEY', False):
+        # JWT authentication - required in staging/production
+        jwt_payload = None
+        user_id = None
+        if getattr(settings, 'REQUIRE_JWT_AUTH', True):
+            jwt_payload = jwt_auth.require_jwt_auth(req)
+            user_id = jwt_payload.get('sub')
+            logger.info(f"[{req_id}] JWT authenticated - User: {user_id}, Session: {jwt_payload.get('session_id')}")
+        elif getattr(settings, 'REQUIRE_API_KEY', False):
+            # Fallback to API key for development
             provided = req.headers.get('x-api-key')
             if not provided or provided != getattr(settings, 'API_KEY', None):
                 raise HTTPException(status_code=401, detail="Invalid API key")
+
+        # Connection cap enforcement
+        connection_allowed = await connection_manager.acquire_connection(
+            session_id=request.session_id,
+            request_id=req_id,
+            endpoint="/v1/agent-whisperer/chat/stream",
+            user_id=user_id,
+            protocol_version=protocol_version
+        )
+        
+        if not connection_allowed:
+            raise HTTPException(
+                status_code=429, 
+                detail="Connection limit exceeded. Please wait for existing connections to complete."
+            )
 
         # Basic per-session rate limit
         allowed, remaining = await check_rate_limit(request.session_id, limit=60, window_seconds=60)
@@ -133,6 +157,7 @@ async def chat_stream(request: ChatRequest, req: Request):
                     metrics_collector.record_chunk(req_id, len(chunk))
                 
                 # Route based on query type
+                logger.info(f"Query type determined: {query_type}")
                 if query_type == QueryType.GREETING:
                     # Friendly greeting response
                     yield format_sse_chunk("Hello! I'm Agent Whisperer, your Sydney real estate AI assistant. ", "text", protocol_version)
@@ -189,6 +214,9 @@ async def chat_stream(request: ChatRequest, req: Request):
                     enhanced_message = f"As a Sydney real estate expert, {request.message}"
                     effort, verbosity, allowed_tools, tool_choice = _llm_prefs_for(query_type)
                     logger.info(f"LLM prefs - effort={effort}, verbosity={verbosity}, tools={(allowed_tools or [])}")
+                    logger.info(f"About to call ai_router.process_message for PROPERTY_ANALYSIS")
+                    logger.info(f"ai_router instance: {ai_router}")
+                    logger.info(f"ai_router clients initialized: {getattr(ai_router, '_clients_initialized', 'N/A')}")
                     async for chunk in ai_router.process_message(
                         enhanced_message,
                         request.session_id,
@@ -249,6 +277,9 @@ async def chat_stream(request: ChatRequest, req: Request):
                     history = [{"role": m.role, "content": m.content} for m in request.messages] if request.messages else []
                     effort, verbosity, allowed_tools, tool_choice = _llm_prefs_for(QueryType.GENERAL_CHAT)
                     logger.info(f"LLM prefs - effort={effort}, verbosity={verbosity}, tools={(allowed_tools or [])}")
+                    logger.info(f"About to call ai_router.process_message for GENERAL_CHAT")
+                    logger.info(f"ai_router instance: {ai_router}")
+                    logger.info(f"ai_router clients initialized: {getattr(ai_router, '_clients_initialized', 'N/A')}")
                     async for chunk in ai_router.process_message(
                         request.message,
                         request.session_id,
@@ -274,6 +305,9 @@ async def chat_stream(request: ChatRequest, req: Request):
                 yield format_sse_chunk("I encountered an error. Please try again.", "text", protocol_version)
                 yield format_sse_chunk("", "finish", protocol_version)
                 metrics_collector.complete_request(req_id)
+            finally:
+                # Always release connection
+                await connection_manager.release_connection(req_id)
         
         # Set appropriate headers based on protocol version
         response_headers = {

@@ -1,0 +1,97 @@
+{
+  "family": "reagent-sydney-v03-spike",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "reagent-backend",
+      "image": "ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/reagent-sydney-v03:spike",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "BACKEND_REGION",
+          "value": "ap-southeast-2"
+        },
+        {
+          "name": "OPENAI_MODEL",
+          "value": "gpt-4o-mini"
+        },
+        {
+          "name": "SESSION_TIMEOUT_MINUTES",
+          "value": "30"
+        },
+        {
+          "name": "MAX_REQUESTS_PER_MINUTE",
+          "value": "60"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/database-url"
+        },
+        {
+          "name": "API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/api-key"
+        },
+        {
+          "name": "JWT_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/jwt-secret"
+        },
+        {
+          "name": "ADMIN_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/admin-key"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/openai-key"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/anthropic-key"
+        },
+        {
+          "name": "FIRECRAWL_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/firecrawl-key"
+        },
+        {
+          "name": "TAVILY_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:reagent/tavily-key"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/reagent-sydney-v03",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "spike"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8001/api/v1/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "stopTimeout": 30
+    }
+  ]
+}

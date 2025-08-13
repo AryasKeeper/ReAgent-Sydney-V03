@@ -1,0 +1,59 @@
+# Multi-stage Dockerfile for ReAgent Sydney V03 - 72-Hour Spike
+# Optimized for ECS Fargate deployment in ap-southeast-2
+
+# Build stage
+FROM python:3.11-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Production stage
+FROM python:3.11-slim as production
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r reagent && useradd -r -g reagent reagent
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /home/reagent/.local
+
+# Create application directory
+WORKDIR /app
+
+# Copy application code
+COPY --chown=reagent:reagent . .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PATH=/home/reagent/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=production
+
+# Create required directories
+RUN mkdir -p /app/logs /app/data && \
+    chown -R reagent:reagent /app
+
+# Switch to non-root user
+USER reagent
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8001/api/v1/health || exit 1
+
+# Expose port
+EXPOSE 8001
+
+# Start application
+CMD ["python", "app_spike.py"]

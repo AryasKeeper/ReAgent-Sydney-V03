@@ -60,57 +60,38 @@ def format_v5_chunk(content: Any, chunk_type: str = "text") -> str:
     """
     Format chunks for Vercel AI SDK v5 (UI Message Stream protocol)
     
-    Uses structured JSON messages with type field:
-    - text-delta: Incremental text content
-    - finish: Stream completion
-    - tool-call: Tool invocation (for future use)
-    - error: Error message
+    CRITICAL: Uses custom SSE format matching v3 contract, NOT standard SSE format
+    - NO 'data:' prefix allowed
+    - NO double newlines (\n\n) allowed  
+    - Must use same format as v3: TYPE:JSON_CONTENT\n
     """
     if chunk_type == "text":
-        message = {
-            "type": "text-delta",
-            "textDelta": content
-        }
-        return f'data: {json.dumps(message)}\n\n'
+        # v5 text chunks use same format as v3 but with structured content
+        # Use type 0 for text content to maintain compatibility
+        escaped_content = json.dumps(content)
+        return f'0:{escaped_content}\n'
     
     elif chunk_type == "finish":
-        message = {
-            "type": "finish",
-            "finishReason": "stop",
-            "usage": {
-                "promptTokens": 0,
-                "completionTokens": 0
-            }
-        }
-        return f'data: {json.dumps(message)}\n\n'
+        # v5 finish signal uses same format as v3
+        return 'd:{"finishReason":"stop"}\n'
     
     elif chunk_type == "sources_meta":
-        # In v5, sources can be sent as tool-result messages
-        message = {
-            "type": "tool-result",
-            "toolName": "web_search",
-            "result": content if isinstance(content, list) else [content]
-        }
-        return f'data: {json.dumps(message)}\n\n'
+        # v5 sources use same type 8 as v3
+        sources_json = json.dumps(content if isinstance(content, list) else [content])
+        return f'8:{sources_json}\n'
     
     elif chunk_type == "error":
-        message = {
-            "type": "error",
-            "error": {
-                "message": content,
-                "type": "stream_error"
-            }
-        }
-        return f'data: {json.dumps(message)}\n\n'
+        # v5 error format matches v3 finish with error
+        return f'd:{{"finishReason":"error","error":{json.dumps(content)}}}\n'
     
     elif chunk_type == "message_start":
-        # Start of a new assistant message
+        # v5 message start - use type 1 for message metadata
         message = {
             "type": "message-start",
             "id": str(uuid.uuid4()),
             "role": "assistant"
         }
-        return f'data: {json.dumps(message)}\n\n'
+        return f'1:{json.dumps(message)}\n'
     
     else:
         raise ValueError(f"Unknown chunk type: {chunk_type}")
