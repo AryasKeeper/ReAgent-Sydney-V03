@@ -15,6 +15,6 @@ asyncpg==0.29.0
 sqlalchemy==2.0.25
 ulid-py==1.1.0
 jwt[crypto]==1.3.1
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 apscheduler==3.10.4
 sentry-sdk[fastapi]==2.19.0
