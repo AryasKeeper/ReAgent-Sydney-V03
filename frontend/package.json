@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "ai": "^5.0.9",
+    "ai": "^5.0.15",
     "@ai-sdk/react": "^2.0.9",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
