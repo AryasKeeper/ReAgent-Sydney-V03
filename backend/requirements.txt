@@ -11,7 +11,7 @@ pytest-asyncio==1.1.0
 aioredis==2.0.1
 # 72-hour spike additions
 alembic==1.13.2
-asyncpg==0.29.0
+asyncpg==0.30.0
 sqlalchemy==2.0.25
 ulid-py==1.1.0
 jwt[crypto]==1.3.1
