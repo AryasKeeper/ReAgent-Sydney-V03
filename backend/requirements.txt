@@ -17,4 +17,4 @@ ulid-py==1.1.0
 jwt[crypto]==1.3.1
 psycopg2-binary==2.9.9
 apscheduler==3.10.4
-sentry-sdk[fastapi]==2.19.0
+sentry-sdk[fastapi]==2.37.0
