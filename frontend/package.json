@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "ai": "^5.0.9",
-    "@ai-sdk/react": "^2.0.9",
+    "@ai-sdk/react": "^2.0.60",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
